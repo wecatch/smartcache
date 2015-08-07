@@ -23,7 +23,7 @@ class CacheTest(unittest.TestCase):
 
     def test_redis_command(self):
         with self.assertRaises(AttributeError):
-            self.cc.hset
+            self.cc.dict
 
         with self.assertRaises(AttributeError):
             self.cc.aaaa
@@ -77,58 +77,112 @@ class CacheTest(unittest.TestCase):
         self.cc.renamenx
 
     def test_size_type(self):
-        self.cc.lupdate_list(self.key, self.key)
-        self.assertTrue(self.cc.size(self.key) == 1)
+        data = [self.key, self.key]
+        length = len(data)
+        self.cc.lupdate(self.key, data)
+        self.assertEqual(self.cc.size(self.key), length)
         self.cc.delete(self.key)
 
-        self.cc.update_set(self.key, 1)
-        self.assertTrue(self.cc.size(self.key) == 1)
+        self.cc.update_set(self.key, data)
+        self.assertEqual(self.cc.size(self.key), 1)
         self.cc.delete(self.key)
 
-        self.cc.update_sorted_set(self.key, (1, 10))
-        self.assertTrue(self.cc.size(self.key) == 1)
+        self.cc.update_sortedset(self.key, (1, 10))
+        self.assertEqual(self.cc.size(self.key), 1)
         self.cc.delete(self.key)
 
-        self.cc.update_sorted_set(self.key, [(1, 10), (2, 10)])
-        self.assertTrue(self.cc.size(self.key) == 2)
+        self.cc.update_sortedset(self.key, [(1, 10), (2, 10)])
+        self.assertEqual(self.cc.size(self.key), 2)
         self.cc.delete(self.key)
 
-        self.cc.rupdate_list(self.key, 1)
-        self.assertTrue(self.cc.size(self.key) == 1)
+        self.cc.rupdate(self.key, data)
+        self.assertEqual(self.cc.size(self.key), length)
         self.cc.delete(self.key)
 
     def test_dict(self):
-        self.cc.update_dict(self.key, self.key, self.key)
-        self.assertEqual(self.cc.dict_value(self.key, self.key), self.key)
+        self.cc.dict(self.key, self.key, self.key)
+        self.assertEqual(self.cc.dict(self.key, self.key), self.key)
 
     def test_list(self):
-        self.cc.lupdate_list(self.key, self.key)
-        ls = self.cc.list_value(self.key)
+        #lupdate
+        self.cc.lupdate(self.key, self.key)
+        ls = self.cc.list(self.key)
         self.assertEqual(len(ls), 1)
         self.assertEqual(ls[0], self.key)
         self.cc.delete(self.key)
 
-        self.cc.rupdate_list(self.key, self.key)
-        ls = self.cc.list_value(self.key)
+        #rupdate
+        self.cc.rupdate(self.key, self.key)
+        ls = self.cc.list(self.key)
         self.assertEqual(len(ls), 1)
         self.assertEqual(ls[0], self.key)
         self.cc.delete(self.key)
 
-        self.cc.lupdate_list(self.key, self.key)
+        #rpop
+        self.cc.lupdate(self.key, self.key)
         self.assertEqual(self.cc.size(self.key), 1)
-        v = self.cc.rpop_value(self.key)
+        v = self.cc.rpop(self.key)
         self.assertEqual(v, self.key)
         self.assertEqual(self.cc.size(self.key), 0)
 
-        self.cc.lupdate_list(self.key, self.key)
+        #lupdate
+        self.cc.lupdate(self.key, self.key)
         self.assertEqual(self.cc.size(self.key), 1)
-        v = self.cc.lpop_value(self.key)
+        v = self.cc.lpop(self.key)
         self.assertEqual(v, self.key)
         self.assertEqual(self.cc.size(self.key), 0)
 
     def test_set(self):
-        pass
+        self.cc.update_set(self.key, self.key)
+        #contains
+        self.assertTrue(self.cc.contains(self.key, self.key))
+        self.assertFalse(self.cc.contains(self.key, 't'))
+        #set value
+        self.assertEqual(self.cc.members(self.key), [self.key])
+        #pop value
+        self.assertEqual(self.cc.pop_member(self.key, self.key), 1)
+        self.assertFalse(self.cc.contains(self.key, self.key))
+        self.assertEqual(self.cc.pop_member(self.key, self.key), 0)
 
+    def test_sorted(self):
+        # sorted members not with score
+        self.cc.update_sortedset(self.key, (self.key, 1))
+        v = self.cc.sortedset_members(self.key)
+        self.assertEqual(v, [self.key])
+
+        # sorted members with score
+        v = self.cc.sortedset_members(self.key, withscores=True)
+        self.assertEqual(v, [(self.key, 1)])
+
+        # remove by score
+        self.assertEqual(self.cc.size(self.key), 1)
+        self.cc.remove_member_with_score(self.key, 0, 2)
+        self.assertEqual(self.cc.size(self.key), 0)
+
+        # pop member
+        self.cc.update_sortedset(self.key, (self.key, 1))
+        self.assertEqual(self.cc.size(self.key), 1)
+        self.cc.pop_member(self.key, self.key)
+        self.assertEqual(self.cc.size(self.key), 0)
+
+    def test_inc(self):
+        self.cc.delete(self.key)
+        self.cc.inc(self.key)
+        self.assertEqual(self.cc.get(self.key), '1')
+        self.cc.inc(self.key)
+        self.assertEqual(self.cc.get(self.key), '2')
+
+        #inc dict
+        self.cc.delete(self.key)
+        self.cc.hinc(self.key, self.key)
+        self.assertEqual(self.cc.dict(self.key, self.key), '1')
+
+        #inc set
+        self.cc.delete(self.key)
+        self.cc.update_sortedset(self.key, (self.key, 1))
+        self.cc.inc_score(self.key, self.key, 2)
+        v = self.cc.sortedset_members(self.key, withscores=True)
+        self.assertEqual(v, [(self.key, 3)])
 
 if __name__ == '__main__':
     unittest.main()

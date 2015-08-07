@@ -1,5 +1,6 @@
 
 import inspect
+import warnings
 try:
     import cPickle as pickle 
 except Exception as e:
@@ -30,17 +31,26 @@ class Cache(object):
         self.get_connection = connection
 
     def valid(self, key):
+        """
+        valid redis key and value
+        """
         if key is None or key is '':
             return False
         return True
 
     def pack(self, *args):
+        """pack args to redis key
+        """
         return '_'.join(map(str, args))
 
     def unpack(self, key):
+        """unpack redis key to tuple
+        """
         return tuple(key.split('_'))
 
     def set(self, name, value, expire=86400):
+        """redis set command
+        """
         if not self.valid(value):
             return
 
@@ -50,7 +60,25 @@ class Cache(object):
         self.__set(name, pickle.dumps(value))
         self.__expire(name, expire)
 
+    def inc(self, key, amount=1):
+        """replace for inc command
+        """
+        return self.__incrby(str(key), amount)
+
+    def hinc(self, name, key, amount=1):
+        """replace for hset hincrby command
+        if this command call, then cant call dict
+        """
+        return self.__hincrby(str(name), key, amount)
+
+    def inc_score(self, name, value, amount=1):
+        """replace for sortedset h
+        """
+        return self.__zincrby(str(name), pickle.dumps(value), amount)
+
     def get(self, name):
+        """redis get command
+        """
         data = self.__get(str(name))
         try:
             return pickle.loads(data) if data else data
@@ -58,39 +86,67 @@ class Cache(object):
             return data
 
     def exists(self, name):
+        """redis exists command
+        """
         return bool(self.__exists(str(name)))
 
     def delete(self, name):
+        """redis delete command
+        """
         return self.__delete(str(name))
 
     def expire(self, name, expire):
+        """redis expire command
+        """
         return self.__expire(str(name), expire)
 
     def expireat(self, name, timestamp):
+        """redis expireat command
+        """
         return self.__expireat(str(name), timestamp)
 
     def persist(self, name):
+        """redis persist command
+        """
         return self.__persist(str(name))
 
     def move(self, name, db):
+        """redis move command
+        """
         return self.__move(str(name), db)
 
     def object(self, name, infotype='idletime'):
+        """redis object command
+        """
         return self.__object(infotype, str(name))
 
     def rename(self, name, newname):
+        """redis rename command
+        """
         return self.__rename(str(name), str(newname))
 
     def renamenx(self, name, newname):
+        """redis renamenx command
+        """
         return self.__renamenx(str(name), str(newname))
 
     def ttl(self, name):
+        """redis ttl command
+        """
         return self.__ttl(str(name))
 
     def type(self, name):
+        """redis type command
+        """
         return self.__type(str(name))
 
     def size(self, key):
+        """replace for:
+        set: scard command
+        zset: zcard command
+        hash: hllen command
+        list: llen command
+        """
         ctype = self.__type(key)
         if ctype == 'set':
             return self.__scard(key)
@@ -107,6 +163,8 @@ class Cache(object):
         return self.__llen(key)
 
     def append(self, name, value):
+        """redis append command
+        """
         return self.__append(str(name), value)
 
     def scan_db(self):
@@ -117,7 +175,7 @@ class Cache(object):
             result_length = len(result_length)
             yield result
 
-    def update_dict(self, name, key, value, expire=86400):
+    def _update_dict(self, name, key, value, expire=86400):
         if not self.valid(name):
             return
 
@@ -131,23 +189,42 @@ class Cache(object):
         self.__hset(name, key, pickle.dumps(value))
         self.__expire(name, expire)
 
-    def dict_value(self, name, key):
-        data = self.__hget(str(name), key)
-        return pickle.loads(data) if data else data
+    def dict(self, name, key, value=None, expire=86400):
+        """replace for hset and hget command
+        """
+        if value is not None:
+            return self._update_dict(name, key, value, expire)
+        else:
+            data = self.__hget(str(name), key)
+            try:
+                return pickle.loads(data) if data else data
+            except:
+                return data
 
-    def lupdate_list(self, name, data, expire=86400):
+    def lupdate(self, name, data, expire=86400):
+        """replace for lpush command
+        """
         self._update_list(name, data, self.__lpush)
 
-    def rupdate_list(self, name, data, expire=86400):
+    def rupdate(self, name, data, expire=86400):
+        """replace for rpush command
+        """
         self._update_list(name, data, self.__rpush)
 
-    def list_value(self, name, skip=0, limit=1):
+    def list(self, name, skip=0, limit=1):
+        """replace for lrange command
+        :returns list value
+        """
         return [pickle.loads(i) for i in self.__lrange(str(name), skip, skip+limit-1)]
 
-    def rpop_value(self, name):
+    def rpop(self, name):
+        """replace for rpop command
+        """
         return self._pop_list_value(name, self.__rpop)
 
-    def lpop_value(self, name):
+    def lpop(self, name):
+        """replace for lpop command
+        """
         return self._pop_list_value(name, self.__lpop)
 
     def _pop_list_value(self, name, func):
@@ -177,11 +254,16 @@ class Cache(object):
     def _is_iterable(data):
         return isinstance(data, list) or isinstance(data, tuple) or inspect.isgenerator(data)
 
-    def set_value(self, name, count=1):
+    def members(self, name, count=1):
+        """replace for set srandmember command
+        :return set members
+        """
+        count = abs(count)
+        name = str(name)
         try:
-            result = self.srandmember(self.message_wait, count)
+            result = self.__srandmember(name, count)
         except:
-            result = self.srandmember(self.message_wait)
+            result = self.__srandmember(name)
 
         if result is None:
             return None
@@ -191,25 +273,86 @@ class Cache(object):
 
         return pickle.loads(result)
 
-    def update_set(self, name, value):
+    def update_set(self, name, member):
         if not self.valid(name):
             return
 
-        self.__sadd(str(name), pickle.dumps(value))
+        if self._is_iterable(member):
+            result = [pickle.dumps(member) for i in member]
+            return self.__sadd(str(name), *result)
+        else:
+            return self.__sadd(str(name), pickle.dumps(member))
 
-    def in_set(self, name, value):
-        return self.sismember(str(name), pickle.dumps(value))
+    def contains(self, name, key):
+        """replace for
+        set sismember command
+        hash hexists command
+        """
+        ctype = self.__type(str(name))
+        if ctype == 'set':
+            return bool(self.__sismember(name, pickle.dumps(key)))
 
-    def move_set_value(self, src, dst, value):
-        return self.smove(str(src), str(dst), pickle.dumps(value))
+        if ctype == 'hash':
+            return bool(self.__hexists(name, key))
 
-    def pop_set_value(self, name, value):
-        return self.srem(str(name), pickle.dumps(value))
+        return False
 
-    def sortedlist_value(self, name, skip, limit):
-        return [pickle.loads(i) for i in self.__zrangebyscore(str(name), float('-inf'), float('inf'), start=skip, num=limit)]
+    def move_set_member(self, src, dst, member):
+        """replace for set smove command
+        """
+        return self.__smove(str(src), str(dst), pickle.dumps(member))
 
-    def update_sorted_set(self, name, value_list, expire=86400):
+    def pop_member(self, name, value=None):
+        """replace for
+        set srem command
+        sortedset zrem command
+        """
+        name = str(name)
+        ctype = self.__type(name)
+        if ctype == 'set':
+            return self._pop_set(name, value) # return pop value number
+
+        if ctype == 'zset':
+            return self._pop_sortedset(name, value) # return pop value number
+
+        return 0
+
+    def _pop_sortedset(self, name, value):
+        name = str(name)
+        if self._is_iterable(value):
+            result = [pickle.dumps(i) for i in value]
+            return self.__zrem(name, *result)
+        else:
+            return self.__zrem(name, pickle.dumps(value))
+
+    def _pop_set(self, name, value):
+        if self._is_iterable(value):
+            return self.__srem(str(name), *[pickle.dumps(i) for i in value])
+        else:
+            return self.__srem(str(name), pickle.dumps(value))
+
+    def sortedset_members(self, name, skip=0, limit=1, min_score='-inf', max_score='inf', withscores=False):
+        """replace for sortedset members
+        """
+        result = self.__zrangebyscore(str(name), float(min_score), float(max_score),
+                                      start=skip, num=limit, withscores=withscores)
+        if withscores:
+            return [(pickle.loads(value), score) for value, score in result]
+
+        return [pickle.loads(value) for value in result]
+
+    def remove_member_with_score(self, name, min_score=0, max_score=0):
+        return self.__zremrangebyscore(str(name), float(min_score), float(max_score))
+
+    def remove_member_with_rank(self):
+        raise NotImplementedError
+
+    def score(self, name, key):
+        return self.__zscore(str(name), pickle.dumps(key))
+
+    def update_sortedset(self, name, value_list, expire=86400):
+        """replace for sortedset zadd command
+        """
         if not self.valid(name):
             return
 
