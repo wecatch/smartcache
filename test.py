@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # coding=utf-8
 
-from cache import Cache
+from redis_cache import Cache
 import unittest
 import time
 
@@ -23,7 +23,7 @@ class CacheTest(unittest.TestCase):
 
     def test_redis_command(self):
         with self.assertRaises(AttributeError):
-            self.cc.dict
+            self.cc.mset
 
         with self.assertRaises(AttributeError):
             self.cc.aaaa
@@ -144,6 +144,11 @@ class CacheTest(unittest.TestCase):
         self.assertFalse(self.cc.contains(self.key, self.key))
         self.assertEqual(self.cc.pop_member(self.key, self.key), 0)
 
+        self.cc.update_set(self.key, [self.key, self.key + '1'])
+        self.assertEqual(self.cc.size(self.key), 2)
+        self.cc.pop_member(self.key, [self.key , self.key + '1'])
+        self.assertEqual(self.cc.size(self.key), 0)
+
     def test_sorted(self):
         # sorted members not with score
         self.cc.update_sortedset(self.key, (self.key, 1))
@@ -159,10 +164,18 @@ class CacheTest(unittest.TestCase):
         self.cc.remove_member_with_score(self.key, 0, 2)
         self.assertEqual(self.cc.size(self.key), 0)
 
-        # pop member
+        # score
         self.cc.update_sortedset(self.key, (self.key, 1))
+        self.assertEqual(self.cc.score(self.key, self.key), 1.0)
+        
+        # pop member
         self.assertEqual(self.cc.size(self.key), 1)
         self.cc.pop_member(self.key, self.key)
+        self.assertEqual(self.cc.size(self.key), 0)
+
+        self.cc.update_sortedset(self.key, [(self.key, 1), (self.key+'1', 2)])
+        self.assertEqual(self.cc.size(self.key), 2)
+        self.cc.pop_member(self.key, [self.key, self.key+'1'])
         self.assertEqual(self.cc.size(self.key), 0)
 
     def test_inc(self):
