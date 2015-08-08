@@ -1,4 +1,5 @@
 import inspect
+import hashlib
 try:
     import cPickle as pickle 
 except Exception as e:
@@ -305,12 +306,12 @@ class Cache(object):
         result = None
         try:
             if with_all:
-                result = self.__smembers(name)
+                result = self.__smembers(name)  # return set
             else:
-                result = self.__srandmember(name, count)
+                result = self.__srandmember(name, count) # return list
         except:
             # Compatible for low version redis
-            result = self.__srandmember(name)
+            result = self.__srandmember(name) # return one value
 
         if result is None:
             return None
