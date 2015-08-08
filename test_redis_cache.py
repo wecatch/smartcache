@@ -103,6 +103,16 @@ class CacheTest(unittest.TestCase):
         self.cc.dict(self.key, self.key, self.key)
         self.assertEqual(self.cc.dict(self.key, self.key), self.key)
 
+        self.assertEqual(self.cc.dict_keys(self.key), [self.key])
+        self.assertEqual(self.cc.dict_values(self.key), [self.key])
+        for k, v in self.cc.dict_items(self.key):
+            self.assertEqual(self.key, k)
+            self.assertEqual(self.key, v)
+
+        for k, v in self.cc.dict(self.key).items():
+            self.assertEqual(self.key, k)
+            self.assertEqual(self.key, v)
+
     def test_list(self):
         #lupdate
         self.cc.lupdate(self.key, self.key)
@@ -153,8 +163,8 @@ class CacheTest(unittest.TestCase):
         data = [self.key, self.key + '1', self.key + '2']
         self.cc.update_set(self.key, data)
         self.assertEqual(self.cc.size(self.key), len(data))
-        self.assertEqual(self.cc.members(self.key, with_all=True), data)
-        self.assertEqual(self.cc.all(self.key), data)
+        self.assertEqual(set(self.cc.members(self.key, with_all=True)), set(data))
+        self.assertEqual(set(self.cc.all(self.key)), set(data))
 
     def test_sorted(self):
         # sorted members not with score

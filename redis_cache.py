@@ -201,9 +201,12 @@ class Cache(object):
         self.__hset(name, key, self.dumps(value))
         self.__expire(name, expire)
 
-    def dict(self, name, key, value=None, expire=86400):
+    def dict(self, name, key=None, value=None, expire=86400):
         """hset and hget command
         """
+        if key is None and value is None:
+            return self._dict_all(name)
+
         if value is not None:
             return self._update_dict(name, key, value, expire)
         else:
@@ -212,6 +215,29 @@ class Cache(object):
                 return self.loads(data) if data else data
             except:
                 return data
+
+    def dict_keys(self, name):
+        name = str(name)
+        return self.__hkeys(name)
+
+    def dict_values(self, name):
+        name = str(name)
+        result = self.__hvals(name)
+        try:
+            return [self.loads(i) for i in result]
+        except:
+            return result
+
+    def dict_items(self, name):
+        return self._dict_all(name).items()
+
+    def _dict_all(self, name):
+        result = self.__hgetall(str(name))
+        try:
+            for k, v in result.items():
+                result[k] = pickle.loads(v)
+        finally:
+            return result
 
     def lupdate(self, name, data, expire=86400):
         """lpush command
