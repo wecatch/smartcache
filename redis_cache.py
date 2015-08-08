@@ -1,6 +1,4 @@
-
 import inspect
-import warnings
 try:
     import cPickle as pickle 
 except Exception as e:
@@ -8,6 +6,7 @@ except Exception as e:
 
 import redis
 from turbo.log import getLogger
+from commands import READ_COMMANDS
 
 logger = getLogger('smartcache')
 
@@ -16,19 +15,29 @@ class Cache(object):
 
     def __getattr__(self, name):
         new_name = name.replace('_Cache', '', 1)
-        redis_client = self.get_connection(name=name)
         if new_name.startswith('__'):
-            attr = getattr(redis_client, new_name[2:], None)
+            command = new_name[2:]
+            if command in READ_COMMANDS:
+                redis_client = self.slave_connection()
+            else:
+                redis_client = self.master_connection()
+            attr = getattr(redis_client, command, None)
             if attr is not None:
                 return attr
 
         return getattr(Cache, name)
 
-    def get_connection(self, host='localhost', port=6379, db=0, name=None):
+    def get_connection(self, host='localhost', port=6379, db=0):
         return redis.StrictRedis(host=host, port=port, db=db)
 
     def inject_connection(self, connection):
         self.get_connection = connection
+
+    def master_connection(self):
+        return self.get_connection()
+
+    def slave_connection(self):
+        return self.get_connection()
 
     def valid(self, key):
         """
@@ -89,6 +98,9 @@ class Cache(object):
         """redis exists command
         """
         return bool(self.__exists(str(name)))
+
+    def __contains__(self, item):
+        return self.exists(item)
 
     def delete(self, name):
         """redis delete command
@@ -172,7 +184,7 @@ class Cache(object):
         result_length = 10
         while result_length:
             start, result = self.__scan(start)
-            result_length = len(result_length)
+            result_length = len(result)
             yield result
 
     def _update_dict(self, name, key, value, expire=86400):
@@ -256,16 +268,20 @@ class Cache(object):
 
     @staticmethod
     def _is_iterable(data):
-        return isinstance(data, list) or isinstance(data, tuple) or inspect.isgenerator(data)
+        return isinstance(data, list) or isinstance(data, tuple) or isinstance(data, set) or inspect.isgenerator(data)
 
-    def members(self, name, count=1):
+    def members(self, name, count=1, with_all=False):
         """set srandmember command
         :return set members
         """
         count = abs(count)
         name = str(name)
+        result = None
         try:
-            result = self.__srandmember(name, count)
+            if with_all:
+                result = self.__smembers(name)
+            else:
+                result = self.__srandmember(name, count)
         except:
             # Compatible for low version redis
             result = self.__srandmember(name)
@@ -273,10 +289,15 @@ class Cache(object):
         if result is None:
             return None
 
-        if isinstance(result, list):
+        if isinstance(result, list) or isinstance(result, set):
             return [self.loads(i) for i in result]
 
         return [self.loads(result)]
+
+    def all(self, name):
+        """set smembers command
+        """
+        return self.members(name, with_all=True)
 
     def update_set(self, name, member):
         if not self.valid(name):
