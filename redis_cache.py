@@ -188,7 +188,7 @@ class Cache(object):
             result_length = len(result)
             yield result
 
-    def _update_dict(self, name, key, value, expire=86400):
+    def _update_hash(self, name, key, value, expire=86400):
         if not self.valid(name):
             return
 
@@ -202,14 +202,14 @@ class Cache(object):
         self.__hset(name, key, self.dumps(value))
         self.__expire(name, expire)
 
-    def dict(self, name, key=None, value=None, expire=86400):
+    def hash(self, name, key=None, value=None, expire=86400):
         """hset and hget command
         """
         if key is None and value is None:
-            return self._dict_all(name)
+            return self._hash_all(name)
 
         if value is not None:
-            return self._update_dict(name, key, value, expire)
+            return self._update_hash(name, key, value, expire)
         else:
             data = self.__hget(str(name), key)
             try:
@@ -217,11 +217,11 @@ class Cache(object):
             except:
                 return data
 
-    def dict_keys(self, name):
+    def hash_keys(self, name):
         name = str(name)
         return self.__hkeys(name)
 
-    def dict_values(self, name):
+    def hash_values(self, name):
         name = str(name)
         result = self.__hvals(name)
         try:
@@ -229,10 +229,10 @@ class Cache(object):
         except:
             return result
 
-    def dict_items(self, name):
-        return self._dict_all(name).items()
+    def hash_items(self, name):
+        return self._hash_all(name).items()
 
-    def _dict_all(self, name):
+    def _hash_all(self, name):
         result = self.__hgetall(str(name))
         try:
             for k, v in result.items():

@@ -100,16 +100,16 @@ class CacheTest(unittest.TestCase):
         self.cc.delete(self.key)
 
     def test_dict(self):
-        self.cc.dict(self.key, self.key, self.key)
-        self.assertEqual(self.cc.dict(self.key, self.key), self.key)
+        self.cc.hash(self.key, self.key, self.key)
+        self.assertEqual(self.cc.hash(self.key, self.key), self.key)
 
-        self.assertEqual(self.cc.dict_keys(self.key), [self.key])
-        self.assertEqual(self.cc.dict_values(self.key), [self.key])
-        for k, v in self.cc.dict_items(self.key):
+        self.assertEqual(self.cc.hash_keys(self.key), [self.key])
+        self.assertEqual(self.cc.hash_values(self.key), [self.key])
+        for k, v in self.cc.hash_items(self.key):
             self.assertEqual(self.key, k)
             self.assertEqual(self.key, v)
 
-        for k, v in self.cc.dict(self.key).items():
+        for k, v in self.cc.hash(self.key).items():
             self.assertEqual(self.key, k)
             self.assertEqual(self.key, v)
 
@@ -205,7 +205,7 @@ class CacheTest(unittest.TestCase):
         #inc dict
         self.cc.delete(self.key)
         self.cc.hinc(self.key, self.key)
-        self.assertEqual(self.cc.dict(self.key, self.key), '1')
+        self.assertEqual(self.cc.hash(self.key, self.key), '1')
 
         #inc set
         self.cc.delete(self.key)
