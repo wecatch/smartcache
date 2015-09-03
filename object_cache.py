@@ -1,6 +1,9 @@
 #-*- conding:utf-8-*-
 
 import time
+import turbo.log 
+
+logger = turbo.log.getLogger('object_cache')
 
 class DataObject(object):
     '''
@@ -71,4 +74,18 @@ class Cache(object):
         Cache.__data.pop(name, None)
 
 if __name__ == '__main__':
-    pass
+    import time
+    v = 1
+    assert Cache.get(v) == None
+    assert Cache.exists(v) == False
+    
+    assert Cache.set(v, v, 5) == None
+    assert Cache.exists(v) == True
+    assert Cache.get(v) == v
+    time.sleep(5)
+    assert Cache.get(v) == None
+    
+    assert Cache.set(v, v) == None
+    assert Cache.get(v) == v
+    assert Cache.delete(name)
+    assert Cache.get(v) == None

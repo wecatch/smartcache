@@ -166,6 +166,13 @@ class CacheTest(unittest.TestCase):
         self.assertEqual(set(self.cc.members(self.key, with_all=True)), set(data))
         self.assertEqual(set(self.cc.all(self.key)), set(data))
 
+        # sadd
+        self.cc.delete(self.key)
+        self.cc.sadd(self.key, self.key)
+        self.assertEqual(self.cc.size(self.key), 1)
+        self.assertEqual(set(self.cc.members(self.key, with_all=True)), set([self.key]))
+        self.assertEqual(set(self.cc.all(self.key)), set([self.key]))
+
     def test_sorted(self):
         # sorted members not with score
         self.cc.update_sortedset(self.key, (self.key, 1))
@@ -194,6 +201,13 @@ class CacheTest(unittest.TestCase):
         self.assertEqual(self.cc.size(self.key), 2)
         self.cc.pop_member(self.key, [self.key, self.key+'1'])
         self.assertEqual(self.cc.size(self.key), 0)
+
+        # zadd
+        self.cc.delete(self.key)
+        self.cc.zadd(self.key, self.key, 1)
+        v = self.cc.sortedset_members(self.key)
+        self.assertEqual(v, [self.key])
+        self.assertEqual(self.cc.score(self.key, self.key), 1.0)
 
     def test_inc(self):
         self.cc.delete(self.key)
