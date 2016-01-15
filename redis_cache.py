@@ -58,7 +58,7 @@ class Cache(object):
         """
         return tuple(key.split('_'))
 
-    def set(self, name, value, expire=86400):
+    def set(self, name, value):
         """redis set command
         """
         if not self.valid(value):
@@ -68,7 +68,6 @@ class Cache(object):
             return
         name = str(name)
         self.__set(name, self.dumps(value))
-        self.__expire(name, expire)
 
     def inc(self, key, amount=1):
         """inc command
@@ -188,7 +187,7 @@ class Cache(object):
             result_length = len(result)
             yield result
 
-    def _update_hash(self, name, key, value, expire=86400):
+    def _update_hash(self, name, key, value):
         if not self.valid(name):
             return
 
@@ -200,16 +199,15 @@ class Cache(object):
 
         name, key = str(name), str(key)
         self.__hset(name, key, self.dumps(value))
-        self.__expire(name, expire)
 
-    def hash(self, name, key=None, value=None, expire=86400):
+    def hash(self, name, key=None, value=None):
         """hset and hget command
         """
         if key is None and value is None:
             return self._hash_all(name)
 
         if value is not None:
-            return self._update_hash(name, key, value, expire)
+            return self._update_hash(name, key, value)
         else:
             data = self.__hget(str(name), key)
             try:
@@ -240,12 +238,12 @@ class Cache(object):
         finally:
             return result
 
-    def lupdate(self, name, data, expire=86400):
+    def lupdate(self, name, data):
         """lpush command
         """
         self._update_list(name, data, self.__lpush)
 
-    def rupdate(self, name, data, expire=86400):
+    def rupdate(self, name, data):
         """rpush command
         """
         self._update_list(name, data, self.__rpush)
@@ -273,7 +271,7 @@ class Cache(object):
 
         return self.loads(data)
 
-    def _update_list(self, name, data, func, expire=86400):
+    def _update_list(self, name, data, func):
         if not self.valid(name):
             return
 
@@ -291,7 +289,6 @@ class Cache(object):
         except Exception as e:
             [func(name, i) for i in result]
 
-        self.__expire(name, expire)
 
     @staticmethod
     def _is_iterable(data):
@@ -414,10 +411,10 @@ class Cache(object):
     def score(self, name, key):
         return self.__zscore(str(name), self.dumps(key))
 
-    def zadd(self, name, value, score, expire=86400):
-        return self.update_sortedset(name, (value, score), expire)
+    def zadd(self, name, value, score):
+        return self.update_sortedset(name, (value, score))
 
-    def update_sortedset(self, name, value_list, expire=86400):
+    def update_sortedset(self, name, value_list):
         """sortedset zadd command
         """
         if not self.valid(name):
@@ -439,7 +436,6 @@ class Cache(object):
             return
 
         name = str(name)
-        self.__expire(name, expire)
         try:
             return self.__zadd(name, *result)
         except Exception as e:

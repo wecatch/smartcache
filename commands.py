@@ -100,4 +100,4 @@ READ_COMMANDS = frozenset([
     'dbsize', 'keys', 'ttl', 'lindex', 'type', 'llen', 'dump', 'scard', 'echo', 'lrange',
     'zcount', 'exists', 'sdiff', 'zrange', 'mget', 'zrank', 'get', 'getbit', 'getrange',
     'zrevrange', 'zrevrangebyscore', 'hexists', 'object', 'sinter', 'zrevrank', 'hget',
-    'zscore', 'hgetall', 'sismember'])
+    'zscore', 'hgetall', 'sismember', 'zrangebyscore', 'zcard'])
