@@ -326,6 +326,9 @@ class Cache(object):
         """
         return self.members(name, with_all=True)
 
+    def sadd(self, name, member):
+        return self.update_set(name, member)
+
     def update_set(self, name, member):
         if not self.valid(name):
             return
@@ -410,6 +413,9 @@ class Cache(object):
 
     def score(self, name, key):
         return self.__zscore(str(name), self.dumps(key))
+
+    def zadd(self, name, value, score, expire=86400):
+        return self.update_sortedset(name, (value, score), expire)
 
     def update_sortedset(self, name, value_list, expire=86400):
         """sortedset zadd command
