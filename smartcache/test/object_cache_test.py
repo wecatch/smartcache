@@ -7,7 +7,7 @@ import random
 import time
 import threading
 
-from object_cache import Cache
+from smartcache.object_cache import Cache
 
 THREAD_COUNT = 0
 

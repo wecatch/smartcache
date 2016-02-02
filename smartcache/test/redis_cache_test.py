@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # coding=utf-8
 
-from redis_cache import Cache
+from smartcache.redis_cache import Cache
 import unittest
 import time
 
@@ -191,7 +191,7 @@ class CacheTest(unittest.TestCase):
         # score
         self.cc.update_sortedset(self.key, (self.key, 1))
         self.assertEqual(self.cc.score(self.key, self.key), 1.0)
-        
+
         # pop member
         self.assertEqual(self.cc.size(self.key), 1)
         self.cc.pop_member(self.key, self.key)
