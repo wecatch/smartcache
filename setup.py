@@ -6,7 +6,7 @@ version = __import__('smartcache').version
 
 install_requires = []
 
-for k in ['redis', 'docopt']:
+for k in ['turbo', 'redis', 'docopt']:
     try:
         __import__(k)
     except ImportError:

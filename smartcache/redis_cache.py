@@ -1,3 +1,5 @@
+from __future__ import absolute_import, division, print_function, with_statement
+
 import inspect
 import hashlib
 import logging
@@ -7,7 +9,8 @@ except Exception as e:
     import pickle
 
 import redis
-from commands import READ_COMMANDS
+from turbo.log import getLogger
+from smartcache.commands import READ_COMMANDS
 
 logger = logging.getLogger('smartcache')
 
