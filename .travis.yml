@@ -7,7 +7,7 @@ services:
 
 # command to install dependencies
 install: 
-  - if [[ $TRAVIS_PYTHON_VERSION == '2.6' ]]; then travis_retry pip install 'tornado<=4.2.0' unittest2; fi
+  - if [[ $TRAVIS_PYTHON_VERSION == '2.6' ]]; then travis_retry pip install 'tornado<=4.3.0' unittest2; fi
   - pip install turbo
   - pip install redis
   - pip install docopt

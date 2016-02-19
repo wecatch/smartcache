@@ -1,5 +1,5 @@
 from setuptools import setup, find_packages
-
+import sys
 
 version = __import__('smartcache').version
 
@@ -11,6 +11,9 @@ for k in ['turbo', 'redis', 'docopt']:
         __import__(k)
     except ImportError:
         install_requires.append(k)
+
+if sys.version_info < (2, 7):
+    install_requires.append('unittest2')
 
 setup(
     name="smartcache",
