@@ -4,9 +4,7 @@ from setuptools import setup, find_packages
 version = __import__('smartcache').version
 
 
-install_requires = [
-
-]
+install_requires = []
 
 for k in ['turbo', 'redis', 'docopt']:
     try:

@@ -4,7 +4,7 @@ from __future__ import absolute_import, division, print_function, with_statement
 from smartcache.test.util import unittest
 
 TEST_MODULES = [
-    'cache_test',
+    'redis_cache_test',
     'object_cache_test',
 ]
 
