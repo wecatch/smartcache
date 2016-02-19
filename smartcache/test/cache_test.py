@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # coding=utf-8
 
-from redis_cache import Cache
+from smartcache.redis_cache import Cache
 import unittest
 import time
 

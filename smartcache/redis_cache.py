@@ -1,3 +1,5 @@
+from __future__ import absolute_import, division, print_function, with_statement
+
 import inspect
 import hashlib
 try:
@@ -7,7 +9,7 @@ except Exception as e:
 
 import redis
 from turbo.log import getLogger
-from commands import READ_COMMANDS
+from smartcache.commands import READ_COMMANDS
 
 logger = getLogger('smartcache')
 

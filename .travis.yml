@@ -1,0 +1,18 @@
+language: python
+python:
+  - "2.6"
+  - "2.7"
+services:
+  - redis-server
+
+# command to install dependencies
+install: 
+  - if [[ $TRAVIS_PYTHON_VERSION == '2.6' ]]; then travis_retry pip install 'tornado<=4.2.0' unittest2; fi
+  - pip install turbo
+  - pip install redis
+  - pip install docopt
+# command to run tests
+script: 
+  - python setup.py install
+  - cd smartcache/test
+  - python runtests.py
