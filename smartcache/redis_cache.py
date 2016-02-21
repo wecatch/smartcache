@@ -2,17 +2,13 @@ from __future__ import absolute_import, division, print_function, with_statement
 
 import inspect
 import hashlib
-import logging
 try:
     import cPickle as pickle
 except Exception as e:
     import pickle
 
 import redis
-from turbo.log import getLogger
 from smartcache.commands import READ_COMMANDS
-
-logger = logging.getLogger('smartcache')
 
 
 class Cache(object):
