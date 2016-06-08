@@ -1,5 +1,6 @@
 from setuptools import setup, find_packages
 import sys
+import os
 
 version = __import__('smartcache').version
 
@@ -15,6 +16,12 @@ for k in ['hash_ring', 'redis', 'docopt']:
 if sys.version_info < (2, 7):
     install_requires.append('unittest2')
 
+kwargs = {}
+
+readme_path = os.path.abspath(os.path.dirname(__file__))
+with open(os.path.join(readme_path, 'README.rst')) as f:
+    kwargs['long_description'] = f.read()
+
 setup(
     name="smartcache",
     version=version,
@@ -23,6 +30,8 @@ setup(
     url="http://github.com/wecatch/smartcache",
     license="http://www.apache.org/licenses/LICENSE-2.0",
     description="smartcache is a friendly redis api",
+    keywords='cache redis objectcache hash_ring shard',
     packages=find_packages(),
-    install_requires=install_requires
+    install_requires=install_requires,
+    **kwargs
 )

@@ -1,10 +1,7 @@
 #-*- conding:utf-8-*-
+from __future__ import absolute_import, division, print_function, with_statement
 
-import logging
 import time
-
-
-logger = logging.getLogger('object_cache')
 
 
 class DataObject(object):

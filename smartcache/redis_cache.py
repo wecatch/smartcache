@@ -13,8 +13,6 @@ import redis
 from hash_ring import HashRing
 from smartcache.commands import READ_COMMANDS
 
-logger = logging.getLogger('smartcache')
-
 
 class Cache(object):
 

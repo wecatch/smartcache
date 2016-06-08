@@ -1,5 +1,4 @@
 smartcache
-=========
 
 .. image:: https://travis-ci.org/wecatch/smartcache.svg?branch=master
     :alt: Build Status
@@ -17,3 +16,4 @@ Getting started
 
     pip install smartcache
 
+friendly redis api for python
