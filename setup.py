@@ -6,7 +6,7 @@ version = __import__('smartcache').version
 
 install_requires = []
 
-for k in ['turbo', 'redis', 'docopt']:
+for k in ['hash_ring', 'redis', 'docopt']:
     try:
         __import__(k)
     except ImportError:
@@ -22,7 +22,7 @@ setup(
     author_email="wecatch.me@gmail.com",
     url="http://github.com/wecatch/smartcache",
     license="http://www.apache.org/licenses/LICENSE-2.0",
-    description="smartcache is friendly redis api",
+    description="smartcache is a friendly redis api",
     packages=find_packages(),
     install_requires=install_requires
 )

@@ -3,13 +3,14 @@ from __future__ import absolute_import, division, print_function, with_statement
 import inspect
 import hashlib
 import logging
+import functools
 try:
     import cPickle as pickle
 except Exception as e:
     import pickle
 
 import redis
-from turbo.log import getLogger
+from hash_ring import HashRing
 from smartcache.commands import READ_COMMANDS
 
 logger = logging.getLogger('smartcache')
@@ -29,7 +30,7 @@ class Cache(object):
             if attr is not None:
                 return attr
 
-        return getattr(Cache, name)
+        raise AttributeError('cache has no attribute %s'%name)
 
     def get_connection(self, host='localhost', port=6379, db=0):
         return redis.StrictRedis(host=host, port=port, db=db)
@@ -456,5 +457,84 @@ class Cache(object):
         return pickle.dumps(obj)
 
 
+class ShardClient(object):
+
+    """
+    ::code-block
+        servers = [
+            {'name': 'server1', 'host': '192.168.0.246', 'port': 6379, 'db': 0, 'weight': 1},
+            {'name': 'server2', 'host': '192.168.0.247', 'port': 6379, 'db': 0, 'weight': 1},
+            {'name': 'server3', 'host': '192.168.0.248', 'port': 6379, 'db': 0, 'weight': 1},
+            {'name': 'server4', 'host': '192.168.0.249', 'port': 6379, 'db': 0, 'weight': 1},
+        ]
+    """
+
+    def __init__(self, servers):
+        self._connections = {}
+        hosts, weights = self.format_servers(servers)
+        self._ring = HashRing(hosts, weights)
+        self.build_connections(servers)
+
+    def format_servers(self, servers):
+        hosts = []
+        weights = {}
+        for s in servers:
+            name = self.node_name(s)
+            hosts.append(name)
+            weights[name] = s['weight']
+
+        return hosts, weights
+
+    def node_name(self, s):
+        return ('%s:%s:%s:%s')%(s['name'], s['host'], s['port'], s['db'])
+
+    def build_connections(self, servers):
+        for s in servers:
+            self._connections[self.node_name(s)] = self.connect_redis(**s)
+
+    def connect_redis(self, host='localhost', port=6379, db=0, **kwargs):
+        return redis.StrictRedis(host=host, port=port, db=db)
+
+    def get_server(self, key):
+        return self._ring.get_node(key)
+
+    def get_connection(self, key):
+        node = self._ring.get_node(key)
+        return self._connections[node]
+
+
+def shard_cache_wrap(shard_cache, cc):
+    def outwrapper(func):
+        @functools.wraps(func)
+        def innerwrapper(key, *args, **kwargs):
+            connection = shard_cache.shard_client.get_connection(key)
+            cc.inject_connection(lambda : connection)
+            return func(key, *args, **kwargs)
+
+        return innerwrapper
+
+    return outwrapper
+
+
+class ShardCache(object):
+
+    slots = frozenset(['inject_connection', 'get_connection', 'master_connection', 'slave_connection'])
+
+    def __init__(self, servers):
+        self.shard_client = ShardClient(servers)
+
+    def __getattr__(self, name):
+        cc = self.get_cache()
+        func = getattr(cc, name, None)
+        if func is None or name in self.slots:
+            raise AttributeError('ShardCache has no attribute %s'%name)
+
+        return shard_cache_wrap(self, cc)(func)
+
+    def get_cache(self):
+        return Cache()
+
+
 if __name__ == '__main__':
     cc = Cache()
+

@@ -6,6 +6,7 @@ from smartcache.test.util import unittest
 TEST_MODULES = [
     'redis_cache_test',
     'object_cache_test',
+    'shard_cache_test',
 ]
 
 
