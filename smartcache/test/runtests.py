@@ -7,6 +7,7 @@ TEST_MODULES = [
     'redis_cache_test',
     'object_cache_test',
     'shard_cache_test',
+    'master_slave_cache_test'
 ]
 
 

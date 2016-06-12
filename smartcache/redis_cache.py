@@ -4,6 +4,10 @@ import inspect
 import hashlib
 import logging
 import functools
+import random
+from collections import namedtuple
+from types import MethodType
+
 try:
     import cPickle as pickle
 except Exception as e:
@@ -533,6 +537,85 @@ class ShardCache(object):
         return Cache()
 
 
+NodeClient = namedtuple('NodeClient', ['node_name', 'client'])
+
+class MasterSlaveClient(object):
+
+    """
+    ::code-block
+        servers = [
+            {'name': 'server1', 'host': '192.168.0.246', 'port': 6379, 'db': 0, 'master': True},
+            {'name': 'server2', 'host': '192.168.0.247', 'port': 6379, 'db': 0, 'slave': False},
+            {'name': 'server3', 'host': '192.168.0.248', 'port': 6379, 'db': 0, 'slave': False},
+            {'name': 'server4', 'host': '192.168.0.249', 'port': 6379, 'db': 0, 'slave': False},
+        ]
+    """
+
+    def __init__(self, servers):
+        self._master = None
+        self._slave = []
+        self._slave_range = []
+        self.build_connections(servers)
+
+    def node_name(self, s):
+        return ('%s:%s:%s:%s')%(s['name'], s['host'], s['port'], s['db'])
+
+    def build_connections(self, servers):
+        for s in servers:
+            nc = NodeClient(self.node_name(s), self.connect_redis(**s))
+            if s.get('master'):
+                self._master = nc
+            else:
+                self._slave.append(nc)
+
+        self._slave_range = range(0, len(self._slave))
+
+    def connect_redis(self, host='localhost', port=6379, db=0, **kwargs):
+        return redis.StrictRedis(host=host, port=port, db=db)
+
+    def get_master(self):
+        return self._master.client
+
+    def get_slave(self, key):
+        index = self.hash_method(key)
+        return self._slave[index].client
+
+    def hash_method(self, key):
+        return random.choice(self._slave_range)
+
+
+def master_slave_cache_wrap(master_slave_cache, cc):
+    def outwrapper(func):
+        @functools.wraps(func)
+        def innerwrapper(key, *args, **kwargs):
+            connection = master_slave_cache.master_slave_client.get_slave(key)
+            cc.slave_connection = MethodType(lambda self: connection, cc)
+            return func(key, *args, **kwargs)
+
+        return innerwrapper
+
+    return outwrapper
+
+
+class MasterSlaveCache(object):
+
+    slots = frozenset(['inject_connection', 'get_connection', 'master_connection', 'slave_connection'])
+
+    def __init__(self, servers):
+        self.master_slave_client = MasterSlaveClient(servers)
+
+    def __getattr__(self, name):
+        cc = self.get_cache()
+        cc.master_connection = MethodType(lambda x: self.master_slave_client.get_master(), cc)
+        func = getattr(cc, name, None)
+        if func is None or name in self.slots:
+            raise AttributeError('ShardCache has no attribute %s'%name)
+
+        return master_slave_cache_wrap(self, cc)(func)
+
+    def get_cache(self):
+        return Cache()
+
+
 if __name__ == '__main__':
     cc = Cache()
-
